@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Watsonx Cognitive Ticket Triage</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+      }
+      body {
+        background: #f4f6f9;
+        padding: 20px;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      header h1 {
+        color: #0f62fe;
+      }
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+      textarea {
+        width: 100%;
+        height: 80px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+      button {
+        background: #0f62fe;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 1rem;
+      }
+      button:hover {
+        background: #0353e9;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .box {
+        background: #eef2ff;
+        padding: 10px;
+        border-radius: 4px;
+        text-align: center;
+      }
+      .box span {
+        display: block;
+        font-size: 0.8rem;
+        color: #666;
+      }
+      .box strong {
+        font-size: 1rem;
+        color: #0f62fe;
+      }
+      .response {
+        background: #e8f5e9;
+        border-left: 4px solid #2e7d32;
+        padding: 10px;
+        color: #1b5e20;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        font-size: 0.9rem;
+      }
+      th {
+        background: #f0f0f0;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>⚡ Watsonx Cognitive Ticket Triage</h1>
+        <p>Automated process routing and agent assist using IBM Watsonx</p>
+      </header>
+
+      <div class="card">
+        <h3>Input Ticket</h3>
+        <textarea id="ticketInput">
+URGENT: I was double charged $150 on my invoice yesterday and I cannot log into my portal!</textarea
+        >
+        <button id="btn" onclick="triage()">Analyze & Route</button>
+      </div>
+
+      <div id="results" class="card hidden">
+        <h3>Extraction Metrics</h3>
+        <div class="grid">
+          <div class="box">
+            <span>Category</span><strong id="cat">-</strong>
+          </div>
+          <div class="box"><span>Urgency</span><strong id="urg">-</strong></div>
+          <div class="box">
+            <span>Sentiment</span><strong id="snt">-</strong>
+          </div>
+          <div class="box"><span>Action</span><strong id="act">-</strong></div>
+        </div>
+        <h3>Drafted Agent Response</h3>
+        <div id="draft" class="response"></div>
+      </div>
+
+      <div class="card">
+        <h3>Operational Audit Log</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Category</th>
+              <th>Urgency</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="logs"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", loadLogs);
+
+      async function triage() {
+        const input = document.getElementById("ticketInput").value;
+        const btn = document.getElementById("btn");
+        if (!input) return;
+
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+
+        try {
+          const res = await fetch("/api/triage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticket_text: input }),
+          });
+          const data = await res.json();
+
+          document.getElementById("cat").innerText = data.category;
+          document.getElementById("urg").innerText = data.urgency_score;
+          document.getElementById("snt").innerText = data.sentiment;
+          document.getElementById("act").innerText = data.recommended_action;
+          document.getElementById("draft").innerText = data.drafted_response;
+          document.getElementById("results").classList.remove("hidden");
+
+          loadLogs();
+        } catch (err) {
+          alert("Error processing ticket.");
+        } finally {
+          btn.innerText = "Analyze & Route";
+          btn.disabled = false;
+        }
+      }
+
+      async function loadLogs() {
+        try {
+          const res = await fetch("/api/logs");
+          const logs = await res.json();
+          const tbody = document.getElementById("logs");
+          if (!logs.length) return;
+
+          tbody.innerHTML = logs
+            .reverse()
+            .map(
+              (l) => `
+                    <tr>
+                        <td>${l.timestamp}</td>
+                        <td>${l.category}</td>
+                        <td>${l.urgency}</td>
+                        <td>${l.action}</td>
+                    </tr>
+                `,
+            )
+            .join("");
+        } catch (e) {}
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+# Environment variables (API credentials)
+.env
+.env.local
+.env.*.local
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Dynamic runtime data / logs
+data/audit_log.csv
+
+# System files
+.DS_Store
+Thumbs.db
